@@ -33,19 +33,19 @@ line does not match the pattern, then the line is not printed.
 The best way to see how this works is with an example. To show an example, we
 need something to search. Let's try searching ripgrep's source code. First
 grab a ripgrep source archive from
-https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip
+https://github.com/BurntSushi/ripgrep/archive/15.2.0.zip
 and extract it:
 
 ```
-$ curl -LO https://github.com/BurntSushi/ripgrep/archive/0.7.1.zip
-$ unzip 0.7.1.zip
-$ cd ripgrep-0.7.1
+$ curl -LO https://github.com/BurntSushi/ripgrep/archive/15.2.0.zip
+$ unzip 15.2.0.zip
+$ cd ripgrep-15.2.0
 $ ls
-benchsuite  grep       tests         Cargo.toml       LICENSE-MIT
-ci          ignore     wincolor      CHANGELOG.md     README.md
-complete    pkg        appveyor.yml  compile          snapcraft.yaml
-doc         src        build.rs      COPYING          UNLICENSE
-globset     termcolor  Cargo.lock    HomebrewFormula
+AI_POLICY.md    FAQ.md           README.md        fuzz      scripts
+benchsuite      GUIDE.md         RELEASE-CHECKLIST.md  pkg      tests
+build.rs        HomebrewFormula  rustfmt.toml     crates
+Cargo.lock      LICENSE-MIT      UNLICENSE        ci
+Cargo.toml      COPYING          CHANGELOG.md     CONTRIBUTING.md
 ```
 
 Let's try our first search by looking for all occurrences of the word `fast`
@@ -127,22 +127,23 @@ function definitions whose name is `write`:
 
 ```
 $ rg 'fn write\('
-src/printer.rs
-469:    fn write(&mut self, buf: &[u8]) {
+crates/globset/src/fnv.rs
+24:    fn write(&mut self, bytes: &[u8]) {
 
-termcolor/src/lib.rs
-227:    fn write(&mut self, b: &[u8]) -> io::Result<usize> {
-250:    fn write(&mut self, b: &[u8]) -> io::Result<usize> {
-428:    fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
-441:    fn write(&mut self, b: &[u8]) -> io::Result<usize> { self.wtr.write(b) }
-454:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-511:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-848:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-915:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-949:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-1114:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-1348:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-1353:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+crates/printer/src/standard.rs
+1519:    fn write(&self, buf: &[u8]) -> io::Result<()> {
+
+crates/printer/src/counter.rs
+55:    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+
+crates/printer/src/path.rs
+150:    pub fn write(&mut self, path: &Path) -> io::Result<()> {
+
+crates/printer/src/summary.rs
+625:    fn write(&self, buf: &[u8]) -> io::Result<()> {
+
+crates/cli/src/wtr.rs
+69:    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
 ```
 
 (**Note:** We escape the `(` here because `(` has special significance inside
@@ -154,21 +155,29 @@ In this example, we didn't specify a file at all. Instead, ripgrep defaulted
 to searching your current directory in the absence of a path. In general,
 `rg foo` is equivalent to `rg foo ./`.
 
-This particular search showed us results in both the `src` and `termcolor`
-directories. The `src` directory is the core ripgrep code where as `termcolor`
-is a dependency of ripgrep (and is used by other tools). What if we only wanted
+This particular search showed us results in several `crates` directories. The
+`crates` directory contains ripgrep's various sub-crates. What if we only wanted
 to search core ripgrep code? Well, that's easy, just specify the directory you
 want:
 
 ```
-$ rg 'fn write\(' src
-src/printer.rs
-469:    fn write(&mut self, buf: &[u8]) {
+$ rg 'fn write\(' crates/printer
+crates/printer/src/standard.rs
+1519:    fn write(&self, buf: &[u8]) -> io::Result<()> {
+
+crates/printer/src/counter.rs
+55:    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+
+crates/printer/src/path.rs
+150:    pub fn write(&mut self, path: &Path) -> io::Result<()> {
+
+crates/printer/src/summary.rs
+625:    fn write(&self, buf: &[u8]) -> io::Result<()> {
 ```
 
-Here, ripgrep limited its search to the `src` directory. Another way of doing
-this search would be to `cd` into the `src` directory and simply use `rg 'fn
-write\('` again.
+Here, ripgrep limited its search to the `crates/printer` directory. Another
+way of doing this search would be to `cd` into the `crates/printer` directory
+and simply use `rg 'fn write\('` again.
 
 
 ### Automatic filtering
