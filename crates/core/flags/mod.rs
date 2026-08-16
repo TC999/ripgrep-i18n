@@ -47,9 +47,6 @@ mod hiargs;
 mod lowargs;
 mod parse;
 
-const INDEXING_NOT_SUPPORTED: &'static str =
-    "Indexing is not supported in this build of ripgrep.";
-
 /// A trait that encapsulates the definition of an optional flag for ripgrep.
 ///
 /// This trait is meant to be used via dynamic dispatch. Namely, the `defs`

@@ -494,10 +494,7 @@ impl ContextSeparator {
     /// handles unescaping.
     pub(crate) fn new(os: &OsStr) -> anyhow::Result<ContextSeparator> {
         let Some(string) = os.to_str() else {
-            anyhow::bail!(
-                "separator must be valid UTF-8 (use escape sequences \
-                 to provide a separator that is not valid UTF-8)"
-            )
+            anyhow::bail!("{}", crate::i18n::t("err-separator-utf8"))
         };
         Ok(ContextSeparator(Some(Vec::unescape_bytes(string).into())))
     }
@@ -572,10 +569,7 @@ impl FieldContextSeparator {
     /// user. Unescaping it automatically handled.
     pub(crate) fn new(os: &OsStr) -> anyhow::Result<FieldContextSeparator> {
         let Some(string) = os.to_str() else {
-            anyhow::bail!(
-                "separator must be valid UTF-8 (use escape sequences \
-                 to provide a separator that is not valid UTF-8)"
-            )
+            anyhow::bail!("{}", crate::i18n::t("err-separator-utf8"))
         };
         Ok(FieldContextSeparator(Vec::unescape_bytes(string).into()))
     }
@@ -606,10 +600,7 @@ impl FieldMatchSeparator {
     /// user. Unescaping it automatically handled.
     pub(crate) fn new(os: &OsStr) -> anyhow::Result<FieldMatchSeparator> {
         let Some(string) = os.to_str() else {
-            anyhow::bail!(
-                "separator must be valid UTF-8 (use escape sequences \
-                 to provide a separator that is not valid UTF-8)"
-            )
+            anyhow::bail!("{}", crate::i18n::t("err-separator-utf8"))
         };
         Ok(FieldMatchSeparator(Vec::unescape_bytes(string).into()))
     }
@@ -695,7 +686,11 @@ impl SortMode {
                     .and_then(|md| md.modified());
                 let Err(err) = md else { return Ok(()) };
                 anyhow::bail!(
-                    "sorting by last modified isn't supported: {err}"
+                    "{}",
+                    crate::i18n::t_args(
+                        "err-sort-last-modified",
+                        &[("err", &err.to_string())],
+                    )
                 );
             }
             SortModeKind::LastAccessed => {
@@ -704,7 +699,11 @@ impl SortMode {
                     .and_then(|md| md.accessed());
                 let Err(err) = md else { return Ok(()) };
                 anyhow::bail!(
-                    "sorting by last accessed isn't supported: {err}"
+                    "{}",
+                    crate::i18n::t_args(
+                        "err-sort-last-accessed",
+                        &[("err", &err.to_string())],
+                    )
                 );
             }
             SortModeKind::Created => {
@@ -713,7 +712,11 @@ impl SortMode {
                     .and_then(|md| md.created());
                 let Err(err) = md else { return Ok(()) };
                 anyhow::bail!(
-                    "sorting by creation time isn't supported: {err}"
+                    "{}",
+                    crate::i18n::t_args(
+                        "err-sort-created",
+                        &[("err", &err.to_string())],
+                    )
                 );
             }
         }

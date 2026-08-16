@@ -63,7 +63,13 @@ pub(crate) fn parse() -> ParseResult<HiArgs> {
 /// whether messages should be printed.
 fn parse_low() -> ParseResult<LowArgs> {
     if let Err(err) = crate::logger::Logger::init() {
-        let err = anyhow::anyhow!("failed to initialize logger: {err}");
+        let err = anyhow::anyhow!(
+            "{}",
+            crate::i18n::t_args(
+                "err-init-logger",
+                &[("err", &err.to_string())],
+            )
+        );
         return ParseResult::Err(err);
     }
 
@@ -86,7 +92,7 @@ fn parse_low() -> ParseResult<LowArgs> {
     }
     // If the end user says no config, then respect it.
     if low.no_config {
-        log::debug!("not reading config files because --no-config is present");
+        log::debug!("{}", crate::i18n::t("log-no-config"));
         return ParseResult::Ok(low);
     }
     // Look for arguments from a config file. If we got nothing (whether the
@@ -94,7 +100,7 @@ fn parse_low() -> ParseResult<LowArgs> {
     // to re-parse.
     let config_args = crate::flags::config::args();
     if config_args.is_empty() {
-        log::debug!("no extra arguments found from configuration file");
+        log::debug!("{}", crate::i18n::t("log-no-config-args"));
         return ParseResult::Ok(low);
     }
     // The final arguments are just the arguments from the CLI appending to
@@ -260,10 +266,19 @@ impl Parser {
             let mat = match lookup {
                 FlagLookup::Match(mat) => mat,
                 FlagLookup::UnrecognizedShort(name) => {
-                    anyhow::bail!("unrecognized flag -{name}")
+                    anyhow::bail!(
+                        "{}",
+                        crate::i18n::t_args(
+                            "err-unrecognized-flag-short",
+                            &[("name", &name.to_string())],
+                        )
+                    )
                 }
                 FlagLookup::UnrecognizedLong(name) => {
-                    let mut msg = format!("unrecognized flag --{name}");
+                    let mut msg = crate::i18n::t_args(
+                        "err-unrecognized-flag-long",
+                        &[("name", &name)],
+                    );
                     if let Some(suggest_msg) = suggest(&name) {
                         msg = format!("{msg}\n\n{suggest_msg}");
                     }
@@ -279,12 +294,18 @@ impl Parser {
                 FlagValue::Switch(true)
             } else {
                 FlagValue::Value(p.value().with_context(|| {
-                    format!("missing value for flag {mat}")
+                    crate::i18n::t_args(
+                        "err-missing-value",
+                        &[("flag", &mat.to_string())],
+                    )
                 })?)
             };
-            mat.flag
-                .update(value, args)
-                .with_context(|| format!("error parsing flag {mat}"))?;
+            mat.flag.update(value, args).with_context(|| {
+                crate::i18n::t_args(
+                    "err-parsing-flag",
+                    &[("flag", &mat.to_string())],
+                )
+            })?;
         }
         Ok(())
     }
@@ -411,7 +432,7 @@ fn suggest(unrecognized: &str) -> Option<String> {
         .map(|name| format!("--{name}"))
         .collect::<Vec<String>>()
         .join(", ");
-    Some(format!("similar flags that are available: {list}"))
+    Some(crate::i18n::t_args("err-similar-flags", &[("list", &list)]))
 }
 
 /// Return a sequence of names similar to the unrecognized name given.

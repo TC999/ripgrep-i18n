@@ -127,8 +127,11 @@ impl HiArgs {
             && let Some(flag) = low.indexing_unsupported_flag()
         {
             anyhow::bail!(
-                "flag --{} does not support indexing",
-                flag.name_long()
+                "{}",
+                crate::i18n::t_args(
+                    "err-flag-no-indexing",
+                    &[("flag", flag.name_long())],
+                )
             );
         }
 
@@ -182,7 +185,13 @@ impl HiArgs {
         } else {
             std::thread::available_parallelism().map_or(1, |n| n.get()).min(12)
         };
-        log::debug!("using {threads} thread(s)");
+        log::debug!(
+            "{}",
+            crate::i18n::t_args(
+                "log-using-threads",
+                &[("threads", &threads.to_string())]
+            )
+        );
         let with_filename = low
             .with_filename
             .unwrap_or_else(|| low.vimgrep || !paths.is_one_file);
@@ -391,7 +400,11 @@ impl HiArgs {
                     Err(err) => err,
                 };
                 log::debug!(
-                    "error building Rust regex in hybrid mode:\n{rust_err}",
+                    "{}",
+                    crate::i18n::t_args(
+                        "log-hybrid-rust-error",
+                        &[("err", &rust_err.to_string())]
+                    ),
                 );
 
                 let pcre_err = match self.matcher_pcre2() {
@@ -400,13 +413,15 @@ impl HiArgs {
                 };
                 let divider = "~".repeat(79);
                 anyhow::bail!(
-                    "regex could not be compiled with either the default \
-                     regex engine or with PCRE2.\n\n\
-                     default regex engine error:\n\
-                     {divider}\n\
-                     {rust_err}\n\
-                     {divider}\n\n\
-                     PCRE2 regex engine error:\n{pcre_err}",
+                    "{}",
+                    crate::i18n::t_args(
+                        "err-regex-hybrid",
+                        &[
+                            ("divider", &divider),
+                            ("rust_err", &rust_err.to_string()),
+                            ("pcre_err", &pcre_err.to_string()),
+                        ],
+                    ),
                 );
             }
         }
@@ -459,9 +474,7 @@ impl HiArgs {
         }
         #[cfg(not(feature = "pcre2"))]
         {
-            Err(anyhow::anyhow!(
-                "PCRE2 is not available in this build of ripgrep"
-            ))
+            Err(anyhow::anyhow!("{}", crate::i18n::t("err-pcre2-unavailable")))
         }
     }
 
@@ -938,9 +951,7 @@ impl HiArgs {
             .create(true)
             .discover()?
             .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "failed to find a place to create/update an index"
-                )
+                anyhow::anyhow!("{}", crate::i18n::t("err-index-create"))
             })?;
         Ok(index)
     }
@@ -948,7 +959,7 @@ impl HiArgs {
     #[cfg(feature = "unstable-index")]
     pub(crate) fn index_read(&self) -> anyhow::Result<grep_index::Index> {
         let index = grep_index::IndexDiscovery::new().discover()?.ok_or_else(
-            || anyhow::anyhow!("failed to find an index to read"),
+            || anyhow::anyhow!("{}", crate::i18n::t("err-index-read")),
         )?;
         Ok(index)
     }
@@ -987,7 +998,13 @@ impl State {
         use std::io::IsTerminal;
 
         let cwd = current_dir()?;
-        log::debug!("read CWD from environment: {}", cwd.display());
+        log::debug!(
+            "{}",
+            crate::i18n::t_args(
+                "log-cwd-env",
+                &[("cwd", &cwd.display().to_string())]
+            )
+        );
         Ok(State {
             is_terminal_stdout: std::io::stdout().is_terminal(),
             stdin_consumed: false,
@@ -1032,11 +1049,12 @@ impl Patterns {
         if low.patterns.is_empty() {
             anyhow::ensure!(
                 !low.positional.is_empty(),
-                "ripgrep requires at least one pattern to execute a search"
+                "{}",
+                crate::i18n::t("err-need-pattern")
             );
             let ospat = low.positional.remove(0);
             let Ok(pat) = ospat.into_string() else {
-                anyhow::bail!("pattern given is not valid UTF-8")
+                anyhow::bail!("{}", crate::i18n::t("err-pattern-not-utf8"))
             };
             return Ok(Patterns { patterns: vec![pat] });
         }
@@ -1065,8 +1083,8 @@ impl Patterns {
                     if path == Path::new("-") {
                         anyhow::ensure!(
                             !state.stdin_consumed,
-                            "error reading -f/--file from stdin: stdin \
-                             has already been consumed"
+                            "{}",
+                            crate::i18n::t("err-stdin-consumed")
                         );
                         for pat in grep::cli::patterns_from_stdin()? {
                             add(pat);
@@ -1119,13 +1137,19 @@ impl Paths {
             let path = PathBuf::from(osarg);
             if state.stdin_consumed && path == Path::new("-") {
                 anyhow::bail!(
-                    "error: attempted to read patterns from stdin \
-                     while also searching stdin",
+                    "{}",
+                    crate::i18n::t("err-stdin-pattern-and-search"),
                 );
             }
             paths.push(path);
         }
-        log::debug!("number of paths given to search: {}", paths.len());
+        log::debug!(
+            "{}",
+            crate::i18n::t_args(
+                "log-paths-count",
+                &[("count", &paths.len().to_string())]
+            )
+        );
         if !paths.is_empty() {
             let is_one_file = paths.len() == 1
                 // Note that we specifically use `!paths[0].is_dir()` here
@@ -1136,7 +1160,13 @@ impl Paths {
                 //
                 // See: https://github.com/BurntSushi/ripgrep/issues/2736
                 && (paths[0] == Path::new("-") || !paths[0].is_dir());
-            log::debug!("is_one_file? {is_one_file:?}");
+            log::debug!(
+                "{}",
+                crate::i18n::t_args(
+                    "log-is-one-file",
+                    &[("is_one_file", &format!("{is_one_file:?}"))]
+                )
+            );
             return Ok(Paths { paths, has_implicit_path: false, is_one_file });
         }
         // N.B. is_readable_stdin is a heuristic! Part of the issue is that a
@@ -1151,19 +1181,21 @@ impl Paths {
             || state.stdin_consumed
             || !matches!(low.mode, Mode::Search(_));
         log::debug!(
-            "using heuristics to determine whether to read from \
-             stdin or search ./ (\
-             is_readable_stdin={is_readable_stdin}, \
-             stdin_consumed={stdin_consumed}, \
-             mode={mode:?})",
-            stdin_consumed = state.stdin_consumed,
-            mode = low.mode,
+            "{}",
+            crate::i18n::t_args(
+                "log-stdin-heuristic",
+                &[
+                    ("is_readable_stdin", &is_readable_stdin.to_string()),
+                    ("stdin_consumed", &state.stdin_consumed.to_string()),
+                    ("mode", &format!("{:?}", low.mode)),
+                ],
+            ),
         );
         let (path, is_one_file) = if use_cwd {
-            log::debug!("heuristic chose to search ./");
+            log::debug!("{}", crate::i18n::t("log-heuristic-cwd"));
             (PathBuf::from("./"), false)
         } else {
-            log::debug!("heuristic chose to search stdin");
+            log::debug!("{}", crate::i18n::t("log-heuristic-stdin"));
             (PathBuf::from("-"), true)
         };
         Ok(Paths { paths: vec![path], has_implicit_path: true, is_one_file })
@@ -1311,17 +1343,33 @@ fn take_hyperlink_config(
 ) -> anyhow::Result<grep::printer::HyperlinkConfig> {
     let mut env = grep::printer::HyperlinkEnvironment::new();
     if let Some(hostname) = hostname(low.hostname_bin.as_deref()) {
-        log::debug!("found hostname for hyperlink configuration: {hostname}");
+        log::debug!(
+            "{}",
+            crate::i18n::t_args(
+                "log-hostname-found",
+                &[("hostname", &hostname)]
+            )
+        );
         env.host(Some(hostname));
     }
     if let Some(wsl_prefix) = wsl_prefix() {
         log::debug!(
-            "found wsl_prefix for hyperlink configuration: {wsl_prefix}"
+            "{}",
+            crate::i18n::t_args(
+                "log-wsl-prefix-found",
+                &[("wsl_prefix", &wsl_prefix)]
+            ),
         );
         env.wsl_prefix(Some(wsl_prefix));
     }
     let fmt = std::mem::take(&mut low.hyperlink_format);
-    log::debug!("hyperlink format: {:?}", fmt.to_string());
+    log::debug!(
+        "{}",
+        crate::i18n::t_args(
+            "log-hyperlink-format",
+            &[("fmt", &fmt.to_string())]
+        )
+    );
     Ok(grep::printer::HyperlinkConfig::new(env, fmt))
 }
 
@@ -1342,8 +1390,8 @@ fn current_dir() -> anyhow::Result<PathBuf> {
         }
     }
     anyhow::bail!(
-        "failed to get current working directory: {err}\n\
-         did your CWD get deleted?",
+        "{}",
+        crate::i18n::t_args("err-get-cwd", &[("err", &err.to_string())],),
     )
 }
 
@@ -1364,8 +1412,11 @@ fn hostname(bin: Option<&Path>) -> Option<String> {
         Ok(bin) => bin,
         Err(err) => {
             log::debug!(
-                "failed to run command '{bin:?}' to get hostname \
-                 (falling back to platform hostname): {err}",
+                "{}",
+                crate::i18n::t_args(
+                    "log-hostname-run-failed",
+                    &[("bin", &format!("{bin:?}")), ("err", &err.to_string())],
+                ),
             );
             return platform_hostname();
         }
@@ -1376,8 +1427,11 @@ fn hostname(bin: Option<&Path>) -> Option<String> {
         Ok(rdr) => rdr,
         Err(err) => {
             log::debug!(
-                "failed to spawn command '{bin:?}' to get \
-                 hostname (falling back to platform hostname): {err}",
+                "{}",
+                crate::i18n::t_args(
+                    "log-hostname-spawn-failed",
+                    &[("bin", &format!("{bin:?}")), ("err", &err.to_string())],
+                ),
             );
             return platform_hostname();
         }
@@ -1386,8 +1440,11 @@ fn hostname(bin: Option<&Path>) -> Option<String> {
         Ok(out) => out,
         Err(err) => {
             log::debug!(
-                "failed to read output from command '{bin:?}' to get \
-                 hostname (falling back to platform hostname): {err}",
+                "{}",
+                crate::i18n::t_args(
+                    "log-hostname-read-failed",
+                    &[("bin", &format!("{bin:?}")), ("err", &err.to_string())],
+                ),
             );
             return platform_hostname();
         }
@@ -1395,9 +1452,11 @@ fn hostname(bin: Option<&Path>) -> Option<String> {
     let hostname = out.trim();
     if hostname.is_empty() {
         log::debug!(
-            "output from command '{bin:?}' is empty after trimming \
-             leading and trailing whitespace (falling back to \
-             platform hostname)",
+            "{}",
+            crate::i18n::t_args(
+                "log-hostname-empty",
+                &[("bin", &format!("{bin:?}"))]
+            ),
         );
         return platform_hostname();
     }
@@ -1412,14 +1471,23 @@ fn platform_hostname() -> Option<String> {
     let hostname_os = match grep::cli::hostname() {
         Ok(x) => x,
         Err(err) => {
-            log::debug!("could not get hostname: {}", err);
+            log::debug!(
+                "{}",
+                crate::i18n::t_args(
+                    "log-hostname-failed",
+                    &[("err", &err.to_string())]
+                )
+            );
             return None;
         }
     };
     let Some(hostname) = hostname_os.to_str() else {
         log::debug!(
-            "got hostname {:?}, but it's not valid UTF-8",
-            hostname_os
+            "{}",
+            crate::i18n::t_args(
+                "log-hostname-not-utf8",
+                &[("hostname", &format!("{:?}", hostname_os))]
+            ),
         );
         return None;
     };
@@ -1442,8 +1510,11 @@ fn wsl_prefix() -> Option<String> {
     let distro_os = std::env::var_os("WSL_DISTRO_NAME")?;
     let Some(distro) = distro_os.to_str() else {
         log::debug!(
-            "found WSL_DISTRO_NAME={:?}, but value is not UTF-8",
-            distro_os
+            "{}",
+            crate::i18n::t_args(
+                "log-wsl-not-utf8",
+                &[("distro", &format!("{:?}", distro_os))]
+            ),
         );
         return None;
     };
@@ -1474,12 +1545,7 @@ fn suggest_pcre2(msg: &str) -> Option<String> {
     if !msg.contains("backreferences") && !msg.contains("look-around") {
         None
     } else {
-        Some(format!(
-            "{msg}
-
-Consider enabling PCRE2 with the --pcre2 flag, which can handle backreferences
-and look-around.",
-        ))
+        Some(format!("{msg}\n\n{}", crate::i18n::t("suggest-pcre2")))
     }
 }
 
@@ -1490,12 +1556,7 @@ and look-around.",
 /// return a new error message suggesting the use of -U/--multiline.
 fn suggest_multiline(msg: String) -> String {
     if msg.contains("the literal") && msg.contains("not allowed") {
-        format!(
-            "{msg}
-
-Consider enabling multiline mode with the --multiline flag (or -U for short).
-When multiline mode is enabled, new line characters can be matched.",
-        )
+        format!("{msg}\n\n{}", crate::i18n::t("suggest-multiline"))
     } else {
         msg
     }
@@ -1504,12 +1565,7 @@ When multiline mode is enabled, new line characters can be matched.",
 /// Possibly suggest the `-a/--text` flag.
 fn suggest_text(msg: String) -> String {
     if msg.contains("pattern contains \"\\0\"") {
-        format!(
-            "{msg}
-
-Consider enabling text mode with the --text flag (or -a for short). Otherwise,
-binary detection is enabled and matching a NUL byte is impossible.",
-        )
+        format!("{msg}\n\n{}", crate::i18n::t("suggest-text"))
     } else {
         msg
     }

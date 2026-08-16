@@ -23,3 +23,6 @@ cargo-timing.html
 
 # ripgrep index
 .ripgrep
+
+# AI 终端
+.reasonix

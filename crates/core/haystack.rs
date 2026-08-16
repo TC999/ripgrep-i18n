@@ -68,11 +68,15 @@ impl HaystackBuilder {
         // noisy.
         if !hay.is_dir() {
             log::debug!(
-                "ignoring {}: failed to pass haystack filter: \
-                 file type: {:?}, metadata: {:?}",
-                hay.dent.path().display(),
-                hay.dent.file_type(),
-                hay.dent.metadata()
+                "{}",
+                crate::i18n::t_args(
+                    "log-haystack-ignored",
+                    &[
+                        ("path", &hay.dent.path().display().to_string()),
+                        ("file_type", &format!("{:?}", hay.dent.file_type())),
+                        ("metadata", &format!("{:?}", hay.dent.metadata())),
+                    ],
+                )
             );
         }
         None

@@ -10,9 +10,6 @@ use std::{collections::BTreeMap, fmt::Write};
 
 use crate::flags::{Category, Flag, defs::FLAGS, doc::version};
 
-const TEMPLATE_SHORT: &'static str = include_str!("template.short.help");
-const TEMPLATE_LONG: &'static str = include_str!("template.long.help");
-
 /// Wraps `std::write!` and asserts there is no failure.
 ///
 /// We only write to `String` in this module.
@@ -34,8 +31,8 @@ pub(crate) fn generate_short() -> String {
         columns.0.push(col1);
         columns.1.push(col2);
     }
-    let mut out =
-        TEMPLATE_SHORT.replace("!!VERSION!!", &version::generate_digits());
+    let mut out = crate::i18n::t("template-help-short")
+        .replace("!!VERSION!!", &version::generate_digits());
     for (cat, (col1, col2)) in cats.iter() {
         let var = format!("!!{name}!!", name = cat.as_str());
         if !cfg!(feature = "unstable-index")
@@ -43,7 +40,7 @@ pub(crate) fn generate_short() -> String {
         {
             out = out.replace(
                 &var,
-                &format!("  {}", crate::flags::INDEXING_NOT_SUPPORTED),
+                &format!("  {}", crate::i18n::t("indexing-not-supported")),
             );
         } else {
             let val = format_short_columns(col1, col2, maxcol1, maxcol2);
@@ -83,7 +80,7 @@ fn generate_short_flag(flag: &dyn Flag) -> (String, String) {
     }
 
     // And now the second column, with the description.
-    write!(col2, "{}", flag.doc_short());
+    write!(col2, "{}", crate::i18n::t(flag.doc_short()));
 
     (col1, col2)
 }
@@ -127,8 +124,8 @@ pub(crate) fn generate_long() -> String {
         generate_long_flag(flag, &mut cat);
     }
 
-    let mut out =
-        TEMPLATE_LONG.replace("!!VERSION!!", &version::generate_digits());
+    let mut out = crate::i18n::t("template-help-long")
+        .replace("!!VERSION!!", &version::generate_digits());
     for (cat, value) in cats.iter() {
         let var = format!("!!{name}!!", name = cat.as_str());
         if !cfg!(feature = "unstable-index")
@@ -136,7 +133,7 @@ pub(crate) fn generate_long() -> String {
         {
             out = out.replace(
                 &var,
-                &format!("    {}", crate::flags::INDEXING_NOT_SUPPORTED),
+                &format!("    {}", crate::i18n::t("indexing-not-supported")),
             );
         } else {
             out = out.replace(&var, value);
@@ -165,7 +162,8 @@ fn generate_long_flag(flag: &dyn Flag, out: &mut String) {
     }
     write!(out, "\n");
 
-    let doc = flag.doc_long().trim();
+    let doc = crate::i18n::t(flag.doc_long());
+    let doc = doc.trim();
     let doc = super::render_custom_markup(doc, "flag", |name, out| {
         let Some(flag) = crate::flags::parse::lookup(name) else {
             unreachable!(r"found unrecognized \flag{{{name}}} in --help docs")
@@ -198,7 +196,11 @@ fn generate_long_flag(flag: &dyn Flag, out: &mut String) {
         // for those flags should discuss the semantics of negation explicitly.
         // But for switches, the behavior is always the same.
         if flag.is_switch() {
-            write!(cleaned, "\n\nThis flag can be disabled with --{negated}.");
+            write!(
+                cleaned,
+                "\n\n{}",
+                crate::i18n::t_args("help-flag-negated", &[("flag", negated)])
+            );
         }
     }
     let indent = " ".repeat(8);

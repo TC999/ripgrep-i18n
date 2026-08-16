@@ -16,10 +16,7 @@ use bstr::{ByteSlice, io::BufReadExt};
 pub fn args() -> Vec<OsString> {
     let config_path = match std::env::var_os("RIPGREP_CONFIG_PATH") {
         None => {
-            log::debug!(
-                "RIPGREP_CONFIG_PATH environment variable is not set, \
-                 therefore not reading any config file"
-            );
+            log::debug!("{}", crate::i18n::t("log-config-env-unset"));
             return vec![];
         }
         Some(config_path) => {
@@ -33,8 +30,11 @@ pub fn args() -> Vec<OsString> {
         Ok((args, errs)) => (args, errs),
         Err(err) => {
             message!(
-                "failed to read the file specified in RIPGREP_CONFIG_PATH: {}",
-                err
+                "{}",
+                crate::i18n::t_args(
+                    "err-config-read-path",
+                    &[("err", &err.to_string())],
+                )
             );
             return vec![];
         }
@@ -66,7 +66,16 @@ fn parse<P: AsRef<Path>>(
     let path = path.as_ref();
     match std::fs::File::open(&path) {
         Ok(file) => parse_reader(file),
-        Err(err) => anyhow::bail!("{}: {}", path.display(), err),
+        Err(err) => anyhow::bail!(
+            "{}",
+            crate::i18n::t_args(
+                "err-config-open",
+                &[
+                    ("path", &path.display().to_string()),
+                    ("err", &err.to_string()),
+                ],
+            )
+        ),
     }
 }
 
@@ -99,7 +108,16 @@ fn parse_reader<R: std::io::Read>(
                 args.push(osstr.to_os_string());
             }
             Err(err) => {
-                errs.push(anyhow::anyhow!("{line_number}: {err}"));
+                errs.push(anyhow::anyhow!(
+                    "{}",
+                    crate::i18n::t_args(
+                        "err-config-line",
+                        &[
+                            ("line", &line_number.to_string()),
+                            ("err", &err.to_string()),
+                        ],
+                    )
+                ));
             }
         }
         Ok(true)

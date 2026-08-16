@@ -25,6 +25,28 @@ pub fn setup(test_name: &str) -> (Dir, TestCommand) {
     (dir, cmd)
 }
 
+/// Returns the path to the `locales` directory at the repository root.
+///
+/// Tests execute the ripgrep binary from a temporary directory, so this is
+/// used to point ripgrep at the translation files committed to the repo via
+/// the `RG_LOCALES_DIR` environment variable.
+fn locales_dir() -> PathBuf {
+    let root = std::env::var_os("CARGO_MANIFEST_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            std::env::current_exe()
+                .unwrap()
+                .parent()
+                .expect("executable's directory")
+                .parent()
+                .expect("target dir")
+                .parent()
+                .expect("crate root")
+                .to_path_buf()
+        });
+    root.join("locales")
+}
+
 /// Like `setup`, but uses PCRE2 as the underlying regex engine.
 pub fn setup_pcre2(test_name: &str) -> (Dir, TestCommand) {
     let mut dir = Dir::new(test_name);
@@ -167,6 +189,9 @@ impl Dir {
     pub fn command(&self) -> TestCommand {
         let mut cmd = self.bin();
         cmd.env_remove("RIPGREP_CONFIG_PATH");
+        // Point ripgrep at the translation files that live in the repository
+        // root, since tests execute the binary from a temporary directory.
+        cmd.env("RG_LOCALES_DIR", locales_dir());
         cmd.current_dir(&self.dir);
         cmd.arg("--path-separator").arg("/");
         if self.is_pcre2() {

@@ -252,7 +252,16 @@ impl<W: WriteColor> SearchWorker<W> {
             self.config.binary_implicit.clone()
         };
         let path = haystack.path();
-        log::trace!("{}: binary detection: {:?}", path.display(), bin);
+        log::trace!(
+            "{}",
+            crate::i18n::t_args(
+                "log-binary-detection",
+                &[
+                    ("path", &path.display().to_string()),
+                    ("bin", &format!("{:?}", bin)),
+                ],
+            )
+        );
 
         self.searcher.set_binary_detection(bin);
         if haystack.is_stdin() {
@@ -306,15 +315,19 @@ impl<W: WriteColor> SearchWorker<W> {
         let mut rdr = self.command_builder.build(&mut cmd).map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!(
-                    "preprocessor command could not start: '{cmd:?}': {err}",
+                crate::i18n::t_args(
+                    "err-preprocessor-start",
+                    &[("cmd", &format!("{cmd:?}")), ("err", &err.to_string())],
                 ),
             )
         })?;
         let result = self.search_reader(path, &mut rdr).map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!("preprocessor command failed: '{cmd:?}': {err}"),
+                crate::i18n::t_args(
+                    "err-preprocessor-failed",
+                    &[("cmd", &format!("{cmd:?}")), ("err", &err.to_string())],
+                ),
             )
         });
         let close_result = rdr.close();

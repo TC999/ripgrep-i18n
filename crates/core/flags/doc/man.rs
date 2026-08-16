@@ -6,8 +6,6 @@ use std::{collections::BTreeMap, fmt::Write};
 
 use crate::flags::{Flag, defs::FLAGS, doc::version};
 
-const TEMPLATE: &'static str = include_str!("template.rg.1");
-
 /// Wraps `std::write!` and asserts there is no failure.
 ///
 /// We only write to `String` in this module.
@@ -34,13 +32,14 @@ pub(crate) fn generate() -> String {
         generate_flag(flag, &mut cat);
     }
 
-    let mut out = TEMPLATE.replace("!!VERSION!!", &version::generate_digits());
+    let mut out = crate::i18n::t("template-man")
+        .replace("!!VERSION!!", &version::generate_digits());
     for (cat, value) in cats.iter() {
         let var = format!("!!{name}!!", name = cat.as_str());
         if !cfg!(feature = "unstable-index")
             && matches!(cat, crate::flags::Category::Indexing)
         {
-            out = out.replace(&var, crate::flags::INDEXING_NOT_SUPPORTED);
+            out = out.replace(&var, &crate::i18n::t("indexing-not-supported"));
         } else {
             out = out.replace(&var, value);
         }
@@ -67,7 +66,8 @@ fn generate_flag(flag: &'static dyn Flag, out: &mut String) {
     write!(out, "\n");
 
     writeln!(out, ".RS 4");
-    let doc = flag.doc_long().trim();
+    let doc = crate::i18n::t(flag.doc_long());
+    let doc = doc.trim();
     // Convert \flag{foo} into something nicer.
     let doc = super::render_custom_markup(doc, "flag", |name, out| {
         let Some(flag) = crate::flags::parse::lookup(name) else {
@@ -108,7 +108,8 @@ fn generate_flag(flag: &'static dyn Flag, out: &mut String) {
             writeln!(out, ".sp");
             writeln!(
                 out,
-                r"This flag can be disabled with \fB\-\-{negated}\fP."
+                "{}",
+                crate::i18n::t_args("man-flag-negated", &[("flag", negated)],)
             );
         }
     }

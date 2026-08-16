@@ -13,6 +13,7 @@ mod messages;
 
 mod flags;
 mod haystack;
+mod i18n;
 mod index;
 mod logger;
 mod search;
@@ -418,11 +419,7 @@ fn special(mode: crate::flags::SpecialMode) -> anyhow::Result<ExitCode> {
 /// explicit path to search. This is because the message can otherwise be
 /// noisy, e.g., when it is intended that there is nothing to search.
 fn eprint_nothing_searched() {
-    err_message!(
-        "No files were searched, which means ripgrep probably \
-         applied a filter you didn't expect.\n\
-         Running with --debug will show why files are being skipped."
-    );
+    err_message!("{}", crate::i18n::t("err-nothing-searched"));
 }
 
 /// Prints the statistics given to the writer given.
@@ -464,26 +461,25 @@ fn print_stats<W: Write>(
         )?;
         write!(wtr, "\n")
     } else {
-        write!(
-            wtr,
-            "
-{matches} matches
-{lines} matched lines
-{searches_with_match} files contained matches
-{searches} files searched
-{bytes_printed} bytes printed
-{bytes_searched} bytes searched
-{search_time:0.6} seconds spent searching
-{process_time:0.6} seconds total
-",
-            matches = stats.matches(),
-            lines = stats.matched_lines(),
-            searches_with_match = stats.searches_with_match(),
-            searches = stats.searches(),
-            bytes_printed = stats.bytes_printed(),
-            bytes_searched = stats.bytes_searched(),
-            search_time = stats.elapsed().as_secs_f64(),
-            process_time = elapsed.as_secs_f64(),
-        )
+        let text = crate::i18n::t_args(
+            "stats-summary",
+            &[
+                ("matches", &stats.matches().to_string()),
+                ("lines", &stats.matched_lines().to_string()),
+                (
+                    "searches_with_match",
+                    &stats.searches_with_match().to_string(),
+                ),
+                ("searches", &stats.searches().to_string()),
+                ("bytes_printed", &stats.bytes_printed().to_string()),
+                ("bytes_searched", &stats.bytes_searched().to_string()),
+                (
+                    "search_time",
+                    &format!("{:0.6}", stats.elapsed().as_secs_f64()),
+                ),
+                ("process_time", &format!("{:0.6}", elapsed.as_secs_f64())),
+            ],
+        );
+        write!(wtr, "\n{text}\n")
     }
 }

@@ -14,14 +14,17 @@ pub(crate) fn generate_digits() -> String {
     let semver = option_env!("CARGO_PKG_VERSION").unwrap_or("N/A");
     match option_env!("RIPGREP_BUILD_GIT_HASH") {
         None => semver.to_string(),
-        Some(hash) => format!("{semver} (rev {hash})"),
+        Some(hash) => crate::i18n::t_args(
+            "version-rev",
+            &[("version", semver), ("hash", hash)],
+        ),
     }
 }
 
 /// Generates a short version string of the form `ripgrep x.y.z`.
 pub(crate) fn generate_short() -> String {
     let digits = generate_digits();
-    format!("ripgrep {digits}")
+    crate::i18n::t_args("version-short", &[("digits", &digits)])
 }
 
 /// Generates a longer multi-line version string.
@@ -34,12 +37,36 @@ pub(crate) fn generate_long() -> String {
     let mut out = String::new();
     writeln!(out, "{}", generate_short()).unwrap();
     writeln!(out).unwrap();
-    writeln!(out, "features:{}", features().join(",")).unwrap();
+    writeln!(
+        out,
+        "{}",
+        crate::i18n::t_args(
+            "version-features",
+            &[("features", &features().join(","))],
+        )
+    )
+    .unwrap();
     if !compile.is_empty() {
-        writeln!(out, "simd(compile):{}", compile.join(",")).unwrap();
+        writeln!(
+            out,
+            "{}",
+            crate::i18n::t_args(
+                "version-simd-compile",
+                &[("features", &compile.join(","))],
+            )
+        )
+        .unwrap();
     }
     if !runtime.is_empty() {
-        writeln!(out, "simd(runtime):{}", runtime.join(",")).unwrap();
+        writeln!(
+            out,
+            "{}",
+            crate::i18n::t_args(
+                "version-simd-runtime",
+                &[("features", &runtime.join(","))],
+            )
+        )
+        .unwrap();
     }
     let (pcre2_version, _) = generate_pcre2();
     writeln!(out, "\n{pcre2_version}").unwrap();
@@ -58,18 +85,39 @@ pub(crate) fn generate_pcre2() -> (String, bool) {
         use grep::pcre2;
 
         let (major, minor) = pcre2::version();
-        write!(out, "PCRE2 {}.{} is available", major, minor).unwrap();
+        write!(
+            out,
+            "{}",
+            crate::i18n::t_args(
+                "version-pcre2-available",
+                &[
+                    ("major", &major.to_string()),
+                    ("minor", &minor.to_string()),
+                ],
+            )
+        )
+        .unwrap();
         if cfg!(target_pointer_width = "64") && pcre2::is_jit_available() {
-            writeln!(out, " (JIT is available)").unwrap();
+            writeln!(
+                out,
+                " {}",
+                crate::i18n::t("version-pcre2-jit-available")
+            )
+            .unwrap();
         } else {
-            writeln!(out, " (JIT is unavailable)").unwrap();
+            writeln!(
+                out,
+                " {}",
+                crate::i18n::t("version-pcre2-jit-unavailable")
+            )
+            .unwrap();
         }
         (out, true)
     }
 
     #[cfg(not(feature = "pcre2"))]
     {
-        writeln!(out, "PCRE2 is not available in this build of ripgrep.")
+        writeln!(out, "{}", crate::i18n::t("version-pcre2-unavailable"))
             .unwrap();
         (out, false)
     }
