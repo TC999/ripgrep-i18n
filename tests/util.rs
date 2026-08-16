@@ -189,6 +189,10 @@ impl Dir {
     pub fn command(&self) -> TestCommand {
         let mut cmd = self.bin();
         cmd.env_remove("RIPGREP_CONFIG_PATH");
+        // Force the English language so that tests are independent of the
+        // locale of the machine running them.
+        cmd.env("LANG", "en_US.UTF-8");
+        cmd.env("LC_ALL", "en_US.UTF-8");
         // Point ripgrep at the translation files that live in the repository
         // root, since tests execute the binary from a temporary directory.
         cmd.env("RG_LOCALES_DIR", locales_dir());
