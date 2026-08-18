@@ -24,5 +24,8 @@ cargo-timing.html
 # ripgrep index
 .ripgrep
 
+## Python
+__pycache__
+
 # AI 终端
 .reasonix
